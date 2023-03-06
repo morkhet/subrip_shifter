@@ -47,19 +47,19 @@ int subrip_line_to_time(char **line, uint8_t start_index, subrip_time *time){
 	//hours
 	memcpy(num2, *line+start_index+0,2);
 	num2[3] = '\0';
-	time->hours = atoi(num2);
+	time->hours = (int8_t) atoi(num2);
 	//minutes
 	memcpy(num2, *line+start_index+3,2);
 	num2[3] = '\0';
-	time->minutes = atoi(num2);
+	time->minutes = (int8_t) atoi(num2);
 	//seconds
 	memcpy(num2, *line+start_index+6,2);
 	num2[3] = '\0';
-	time->seconds = atoi(num2);
+	time->seconds = (int8_t) atoi(num2);
 	//milliseconds
 	memcpy(num3, *line+start_index+9,3);
 	num3[3] = '\0';
-	time->milliseconds = atoi(num3);
+	time->milliseconds = (int16_t) atoi(num3);
 }
 int is_valid_subrip_index_line(char **line, int16_t line_size){
 	if(!line || !*line)
