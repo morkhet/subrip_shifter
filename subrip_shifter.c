@@ -262,18 +262,13 @@ int move_time(subrip_part *item, int32_t move){
 		item->end_time.milliseconds += (abs*sign);
 		abs = 0;
 	}
-	if(!repair_time(&(item->start_time)) || !repair_time(&(item->end_time))){
-		return 0;
-	}
-
-	return 1;
+	return repair_time(&(item->start_time)) && repair_time(&(item->end_time));
 }
 int32_t check_time_parameter(char **arg){
 	uint8_t size = 0;
 	char *tmp = *arg;
 	for(; *tmp != '\0';tmp++){
 		if(size > 9){
-			//size exceeded
 			return 0;
 		}
 		size++;
@@ -282,7 +277,7 @@ int32_t check_time_parameter(char **arg){
 		}
 	}
 	int32_t ret = atoi(*arg);
-	if(ret <= 0 || ret > 356400000){
+	if(ret <= 0 || ret > 356400000){ //subrip_max
 		return 0;
 	}
 	return ret;
