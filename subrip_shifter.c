@@ -173,9 +173,13 @@ int read_subrip_from_line(char **line, int16_t line_size, subrip_part *result, l
 		}
 		int8_t null_term = (!result->length)? 1 : 0;
 		result->text = (char *) realloc(result->text,(result->length*sizeof(char))+line_size+null_term);
-		memset(result->text+result->length,0,line_size+null_term);
+		if(!result->text){
+			printf("error while allocation memory!\n");
+			return 0;
+		}
+		memset(result->text+result->length-(1-null_term),0,line_size);
 		memcpy(result->text+result->length-(1-null_term),*line,line_size);
-		result->length += line_size*(sizeof(char)+null_term);
+		result->length += (line_size*sizeof(char))+null_term;
 		*type = LINETYPE_TEXT;
 		return 1;
 	}
@@ -365,6 +369,10 @@ int main(int argc, char **argv){
 			//write to file, 
 			int16_t text_size = get_subrip_part_output_length(&item);
 			char *text = malloc(text_size);
+			if(!text){
+				printf("error while allocating memory!\n");
+				break;
+			}
 			if(!write_subrip_to_string(&item, &text)){
 				printf("error while converting to string!\n");
 				break;
@@ -378,6 +386,8 @@ int main(int argc, char **argv){
 			curr_line = LINETYPE_INDEX;
 			memset(text,0,text_size);
 			free(text);
+			memset(item.text,0,item.length);
+			free(item.text);
 			memset(&item,0,sizeof(subrip_part));
 			continue;
 		}
