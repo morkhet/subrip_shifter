@@ -31,10 +31,10 @@ typedef enum{
 int usage(){
 	printf("Usage: subrip_shifter -i <input_file> -o <output_file> (-a <milliseconds> | -s <milliseconds>)\n");
 	printf("\n");
-	printf("-i <input_file>			input file which contains the subrip data\n");
-	printf("-o <output_file>		output file which will store the changed data\n");
-	printf("-a <milliseconds>		linear add time to each time-value\n");
-	printf("-s <milliseconds>		linear substract time to each time-value\n");
+	printf("-i <input_file>			path of the input file which contains the subrip data.\n");
+	printf("-o <output_file>		path of the output file which will store the changed data.\n");
+	printf("-a <milliseconds>		linear add time to each time-value. Allowed values: 1-356400000\n");
+	printf("-s <milliseconds>		linear substract time to each time-value. Allowed values: 1-356400000\n");
 }
 
 int subrip_line_to_time(char **line, uint8_t start_index, subrip_time *time){
@@ -177,7 +177,7 @@ int read_subrip_from_line(char **line, int16_t line_size, subrip_part *result, l
 			printf("error while allocation memory!\n");
 			return 0;
 		}
-		memset(result->text+result->length-(1-null_term),0,line_size);
+		memset(result->text+result->length-(1-null_term),0,line_size+(null_term));
 		memcpy(result->text+result->length-(1-null_term),*line,line_size);
 		result->length += (line_size*sizeof(char))+null_term;
 		*type = LINETYPE_TEXT;
@@ -194,15 +194,18 @@ int16_t get_subrip_part_output_length(subrip_part *item){
 		item->length +		    	    //text length
 		2;				    //empty line for part end
 }
-int write_subrip_to_string(subrip_part *item, char **text){
+int write_subrip_to_string(subrip_part *item, char **text, size_t text_length){
 	if(!text || !*text || !item){
 		return 0;
 	}
-	sprintf(*text,"%d\r\n%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d\r\n%s\r\n",item->index,item->start_time.hours,
-										    item->start_time.minutes,item->start_time.seconds,
-										    item->start_time.milliseconds, item->end_time.hours,
-										    item->end_time.minutes, item->end_time.seconds,
-										    item->end_time.milliseconds, item->text);
+	int8_t ret = snprintf(*text,text_length,"%d\r\n%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d\r\n%s\r\n",item->index,item->start_time.hours,
+					   							 	      item->start_time.minutes,item->start_time.seconds,
+												 	      item->start_time.milliseconds, item->end_time.hours,
+										    		 	      item->end_time.minutes, item->end_time.seconds,
+										    		 	      item->end_time.milliseconds, item->text);
+	if(ret < 0 || ret > text_length){
+		return 0;
+	}
 }
 int repair_time(subrip_time *time){
 	if(time->milliseconds < 0){
@@ -293,6 +296,24 @@ int main(int argc, char **argv){
 	int32_t sub_time = 0;
 	int16_t errno = 0;
 	int16_t c = 0;
+
+	if(argc < 2 || argc > 7){
+		usage();
+		return 1;
+	}
+	for(int8_t i = 0; i < argc; ++i){
+		char *p = NULL;
+		int16_t size = 0;
+		for(p = *(argv+i); *p!='\0'; ++p){
+			size++;
+			if(size > 255){ //arguments longer than 255 chars are not allowed
+				printf("argument %d has more than 255 characters!\n",i);
+				usage();
+				return 1;
+			}
+		}
+	}
+
 	while((c = getopt(argc, argv, "i:o:a:s:h")) != -1){
 		switch(c){
 			case 'i':
@@ -333,11 +354,7 @@ int main(int argc, char **argv){
 		}
 
 	}
-	if(!fi || !fo){
-		usage();
-		return 1;
-	}
-	
+
 	int16_t read = 0;
 	char *line = NULL;
 	ssize_t len = 0;
@@ -373,7 +390,7 @@ int main(int argc, char **argv){
 				printf("error while allocating memory!\n");
 				break;
 			}
-			if(!write_subrip_to_string(&item, &text)){
+			if(!write_subrip_to_string(&item, &text, (size_t) text_size)){
 				printf("error while converting to string!\n");
 				break;
 			}
