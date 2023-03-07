@@ -28,7 +28,7 @@ typedef enum{
 	LINETYPE_END
 } line_type;
 
-int usage(){
+void usage(){
 	printf("Usage: subrip_shifter -i <input_file> -o <output_file> (-a <milliseconds> | -s <milliseconds>)\n");
 	printf("\n");
 	printf("-i <input_file>			path of the input file which contains the subrip data.\n");
@@ -60,6 +60,7 @@ int subrip_line_to_time(char **line, uint8_t start_index, subrip_time *time){
 	memcpy(num3, *line+start_index+9,3);
 	num3[3] = '\0';
 	time->milliseconds = (int16_t) atoi(num3);
+	return 0;
 }
 int is_valid_subrip_index_line(char **line, int16_t line_size){
 	if(!line || !*line)
@@ -143,6 +144,7 @@ int is_valid_subrip_text_line(char **line, int16_t line_size){
 			return 0;
 		}*/
 	}
+	return 1;
 }
 int read_subrip_from_line(char **line, int16_t line_size, subrip_part *result, line_type *type){
 	if(!line || !*line || !result || !type){
@@ -183,6 +185,7 @@ int read_subrip_from_line(char **line, int16_t line_size, subrip_part *result, l
 		*type = LINETYPE_TEXT;
 		return 1;
 	}
+	return 0;
 }
 int16_t get_subrip_part_output_length(subrip_part *item){
 	if(!item){
@@ -198,14 +201,15 @@ int write_subrip_to_string(subrip_part *item, char **text, size_t text_length){
 	if(!text || !*text || !item){
 		return 0;
 	}
-	int8_t ret = snprintf(*text,text_length,"%d\r\n%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d\r\n%s\r\n",item->index,item->start_time.hours,
+	int16_t ret = snprintf(*text,text_length,"%d\r\n%02d:%02d:%02d,%03d --> %02d:%02d:%02d,%03d\r\n%s\r\n",item->index,item->start_time.hours,
 					   							 	      item->start_time.minutes,item->start_time.seconds,
 												 	      item->start_time.milliseconds, item->end_time.hours,
 										    		 	      item->end_time.minutes, item->end_time.seconds,
 										    		 	      item->end_time.milliseconds, item->text);
-	if(ret < 0 || ret > text_length){
+	if(ret < 0 || ret > (int16_t) text_length){
 		return 0;
 	}
+	return 1;
 }
 int repair_time(subrip_time *time){
 	if(time->milliseconds < 0){
@@ -294,7 +298,6 @@ int main(int argc, char **argv){
 	FILE *fo = NULL;
 	int32_t add_time = 0;
 	int32_t sub_time = 0;
-	int16_t errno = 0;
 	int16_t c = 0;
 
 	if(argc < 2 || argc > 7){
@@ -357,7 +360,7 @@ int main(int argc, char **argv){
 
 	int16_t read = 0;
 	char *line = NULL;
-	ssize_t len = 0;
+	size_t len = 0;
 	uint32_t line_cnt = 0;
 	subrip_part item = {};
 	line_type curr_line = LINETYPE_INDEX;
